@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jan 17 19:35:37 2021
+
+@author: wanpeng.xie
+"""
+
+import pandas as pd
+import time
+
+
+# addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动抛单.xlsx'
+# autoPlaceOrder = pd.read_excel(addr, sheet_name=None)
+# originalData = autoPlaceOrder['原始PR']
+# orderAbnormal = autoPlaceOrder['异常']
+# warehouseKeeper = autoPlaceOrder['采购人']
+# shortageSheet = autoPlaceOrder['PR异常']
+
+class autoOrder:
+    
+    def importFiles(self, ):
+        addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动抛单.xlsx'
+        global autoPlaceOrder, originalData, orderAbnormal, warehouseKeeper, shortageSheet
+        autoPlaceOrder = pd.read_excel(addr, sheet_name=None)
+        originalData = autoPlaceOrder['原始PR']
+        orderAbnormal = autoPlaceOrder['异常']
+        warehouseKeeper = autoPlaceOrder['采购人']
+        shortageSheet = autoPlaceOrder['PR异常']
+    
+    def settleSheet(self, ):
+        #先把仓管员的物料编码分组格式调整
+        warehouseKeeper['物料编码分组'] = warehouseKeeper['物料编码分组'].apply(str)
+        
+        for i in range(len(originalData)):
+            originalData.loc[i, '物料组'] = str(originalData.loc[i, '物料'])[0:7]
+            warehouseIndex = warehouseKeeper.loc[warehouseKeeper['物料编码分组'] == originalData.loc[i, '物料组']].index
+            print(warehouseIndex, i, len(originalData))
+            originalData.loc[i, '仓管员'] = warehouseKeeper.loc[warehouseIndex[0], '责任仓管员']
+            
+            #处理异常
+            if len(orderAbnormal.loc[orderAbnormal['物料编码']==originalData.loc[i, '物料']]):
+                index = orderAbnormal.loc[orderAbnormal['物料编码']==originalData.loc[i, '物料']].index
+                originalData.loc[i, '异常'] = orderAbnormal.loc[index[0], '下单异常原因'] #之所以是index[0]，是因为有重复项
+                originalData.loc[i, '异常发生时间'] = orderAbnormal.loc[index[0], '异常发生时间']
+                originalData.loc[i, '采购经理'] = orderAbnormal.loc[index[0], '采购经理']
+            else:
+                originalData.loc[i, '异常'] = '无异常，正常下单'
+            
+            #把未分配数量加进去
+            if len(shortageSheet.loc[shortageSheet['物料编码'] == originalData.loc[i, '物料']]):
+                PRindex = shortageSheet.loc[shortageSheet['物料编码'] == originalData.loc[i, '物料']].index
+                originalData.loc[i, 'PR数量'] = shortageSheet.loc[PRindex[0], '未被使用数量']
+            else:
+                originalData.loc[i, 'PR数量'] = '没有未分配数量'
+                
+       
+    def savefile(self, ):
+        fileName = '芯片手工下单' + time.strftime("%Y-%m-%d", time.localtime()) + '.xlsx'
+        addr = 'C:\\Users\\wanpeng.xie\\Desktop\\芯片手工下单备份\\' + fileName
+        with pd.ExcelWriter(addr) as writer:
+            originalData.to_excel(writer, sheet_name='手工下单')
+
+
+if __name__ == '__main__':
+    print('------------正导入数据---------------')
+    A = autoOrder()
+    A.importFiles()
+    print('----------正处理数据-------------')
+    A.settleSheet()
+    print('---------保存文件----------')
+    A.savefile()
+    print('-----------保存成功！----------------')
