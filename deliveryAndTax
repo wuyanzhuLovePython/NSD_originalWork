@@ -1,0 +1,216 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Oct 28 08:43:14 2020
+
+@author: wanpeng.xie
+"""
+
+import pandas as pd
+import numpy as np
+
+
+
+class deliveryAndTax:
+    
+    def importFile(self, ):
+        addr = 'E:/autoWork/TAX.xlsx'
+        global planData, sapData, delivery, payTax, newPayTax, newPlanData
+        
+        planData = pd.read_excel(addr, 'Sheet1')
+        sapData = pd.read_excel(addr, 'Sheet2')
+        delivery = pd.DataFrame(np.arange(13).reshape((1,13)), columns=['序号','转出物料号', '转出物料描述', '转出单位', '转出数量',  '转出仓位', '转入物料号', '转入物料描述', '转入单位', '转入数量', '转入仓位', '转入工厂', '批次'])
+        payTax = pd.read_excel(addr, 'Sheet4')
+        newPayTax = pd.DataFrame(np.arange(len(list(payTax.columns))).reshape((1,len(list(payTax.columns)))), columns=list(payTax.columns))
+        newPlanData = pd.DataFrame(np.arange(5).reshape((1,5)), columns=['半成品编码','物料描述', '数量', '仓位', '批次'])
+
+    
+    
+    def mergePlan(self,):
+        # addr = 'E:/autoWork/TAX.xlsx'
+        
+        global planData, sapData, delivery, payTax, newPayTax, newPlanData
+        # planData = pd.read_excel(addr, 'Sheet1')
+        # sapData = pd.read_excel(addr, 'Sheet2')
+        # delivery = pd.DataFrame(np.arange(13).reshape((1,13)), columns=['序号','转出物料号', '转出物料描述', '转出单位', '转出数量',  '转出仓位', '转入物料号', '转入物料描述', '转入单位', '转入数量', '转入仓位', '转入工厂', '批次'])
+        # payTax = pd.read_excel(addr, 'Sheet4')
+        # newPayTax = pd.DataFrame(np.arange(len(list(payTax.columns))).reshape((1,len(list(payTax.columns)))), columns=list(payTax.columns))
+        # newPlanData = pd.DataFrame(np.arange(5).reshape((1,5)), columns=['半成品编码','物料描述', '数量', '仓位', '批次'])
+        
+        planData['半成品编码'] = planData['半成品编码'].apply(str)
+        planData['批次'] = planData['批次'].apply(str)
+        planData['仓位'] = planData['仓位'].apply(str)
+        codeList = list(set(planData.loc[:,'半成品编码']))
+        print('成品编码：', codeList)
+        
+        i = 0
+        string = ''
+        for code in codeList:
+            tempList = list(planData.loc[planData['半成品编码'].str.contains(code)].index)
+            print('index:',tempList)
+            num = planData.loc[tempList, '数量'].sum()
+            print('数量：',num)
+            PositionLength = len(set(list(planData.loc[tempList, '仓位'])))
+            Positions = list(set(list(planData.loc[tempList, '仓位'])))
+            print('当前仓位重复数:', PositionLength)
+            print(Positions)
+            
+            #把不同仓位的区分出来
+            
+            if PositionLength > 1:
+                for positon in Positions:
+                    PositionData = planData.loc[tempList, :]
+                    PositionIndex = list(PositionData.loc[PositionData['仓位'].str.contains(positon)].index)
+                    print(PositionIndex)
+                    newPlanData.loc[i, '半成品编码'] = code
+                    newPlanData.loc[i, '物料描述'] = PositionData.loc[PositionIndex[0], '物料描述']
+                    num = planData.loc[PositionIndex, '数量'].sum()
+                    newPlanData.loc[i, '数量'] = num
+                    newPlanData.loc[i, '仓位'] = PositionData.loc[PositionIndex[0], '仓位']
+                    
+                    listLength = len(list(PositionData.loc[PositionIndex, '批次']))
+                    
+                    if listLength > 1:
+                        string = ' '.join(list(PositionData.loc[PositionIndex, '批次']))
+                    else:
+                        string = list(PositionData.loc[PositionIndex, '批次'])
+                    
+                    newPlanData.loc[i, '批次'] = string
+                    i = i+1
+                continue
+                            
+            
+            newPlanData.loc[i, '半成品编码'] = code
+            newPlanData.loc[i, '物料描述'] = planData.loc[tempList[0], '物料描述']
+            newPlanData.loc[i, '数量'] = num
+            newPlanData.loc[i, '仓位'] = planData.loc[tempList[0], '仓位']
+            
+            listLength = len(list(planData.loc[tempList, '批次']))
+            print('当前半成品编码重复数:', listLength)
+            
+            if listLength > 1:
+                string = ' '.join(list(planData.loc[tempList, '批次']))
+            else:
+                string = list(planData.loc[tempList, '批次'])
+            
+            newPlanData.loc[i, '批次'] = string
+            i = i+1
+        planData = newPlanData
+        print('--------mergePlan函数运行完毕----------', '\n')
+    
+    def PlanToDe(self,):
+        length = len(planData)
+        for i in range(length):
+            delivery.loc[i, '转出物料号'] = planData.loc[i, '半成品编码']
+            delivery.loc[i, '转入物料号'] = planData.loc[i, '半成品编码']
+            delivery.loc[i, '转出物料描述'] = planData.loc[i, '物料描述']
+            delivery.loc[i, '转入物料描述'] = planData.loc[i, '物料描述']
+            delivery.loc[i, '转出数量'] = planData.loc[i, '数量']
+            delivery.loc[i, '转入数量'] = planData.loc[i, '数量']
+            delivery.loc[i, '转出单位'] = 'PCS'
+            delivery.loc[i, '转入单位'] = 'PCS'
+            delivery.loc[i, '转出仓位'] = planData.loc[i, '仓位']
+
+            if int(planData.loc[i, '仓位']) < 2000:
+                delivery.loc[i, '转入仓位'] = int(planData.loc[i, '仓位']) + 1000
+            else:
+                delivery.loc[i, '转入仓位'] = int(planData.loc[i, '仓位'])
+            delivery.loc[i,['批次']] = planData.loc[i, '批次']
+            delivery.loc[i, '转入工厂'] = '2023'
+        
+     
+     
+    def sapToTax(self,):
+        global sapData, payTax, planData
+        sapData['父件编码'] = sapData['父件编码'].apply(str)
+        
+        #把核心的半成品编码提取出来
+        planLength = len(planData)
+        sapLenght = len(sapData)
+        halfGoodCode = []
+        for index in range(planLength):
+            halfGoodCode.append(planData.loc[index, '半成品编码']) 
+        print('sapToTax函数的半成品编码:',halfGoodCode)
+        
+        #以半成品编码为核心，对sapData进行遍历和筛选
+        i = 0
+        for code in halfGoodCode:
+            for index in range(sapLenght):
+                if sapData.loc[index, '父件编码'] == code:
+                    subCode = sapData.loc[index, '子件编码']
+                    subDesc = sapData.loc[index, '子件描述']
+        
+                    payTax.loc[i, '物料号'] = str(subCode)
+                    payTax.loc[i, '物料描述'] = subDesc
+                    #print(planData.loc[i, '数量'])
+                    
+                    #专门解决数量这一列
+                    #处理主要需要消耗的碳粉
+                    if sapData.loc[index, '子件单位'] == 'KG':
+                        num = sapData.loc[index, '子件用量']
+                        payTax.loc[i, '数量'] = num * float(planData.loc[halfGoodCode.index(code), '数量'])
+                        payTax.loc[i, '单位'] = 'KG'
+                        print('KG:' ,num, planData.loc[halfGoodCode.index(code), '数量'])
+                    
+                    #处理按g的碳粉
+                    elif sapData.loc[index, '子件单位'] == 'G':
+                        num = float(sapData.loc[index, '子件用量']) * 0.001
+                        payTax.loc[i, '数量'] = num * float(planData.loc[halfGoodCode.index(code), '数量'])
+                        payTax.loc[i, '单位'] = 'KG'
+                        print('G:',num, planData.loc[halfGoodCode.index(code), '数量'])
+                        
+                        
+                    #其他的基本上是和数量是一一对应的
+                    else:
+                        num = sapData.loc[index, '子件用量']
+                        payTax.loc[i, '数量'] = num * planData.loc[halfGoodCode.index(code), '数量']
+                        payTax.loc[i, '单位'] = 'PCS'
+                    i = i + 1
+    
+    def mergeDupl(self,):
+        #prepared action
+        global payTax
+        payTax['物料号'] = payTax['物料号'].apply(str)
+        codeList = list(set(payTax['物料号']))
+        print(codeList)
+        i = 0
+        
+        #开始求和
+        for code in codeList:
+            tempList = list(payTax.loc[payTax['物料号'].str.contains(code)].index)#把所有的相同物料编码的都找出来
+            num = payTax.loc[tempList, '数量'].sum() #把这些物料按照index集合起来求和
+            print(num)
+            newPayTax.loc[i, '数量'] = num
+            newPayTax.loc[i, '物料号'] = code
+            newPayTax.loc[i, '物料描述'] = payTax.loc[tempList[0], '物料描述']#反正templist中装的都是同样的物料号和编码
+            newPayTax.loc[i, '单位'] = payTax.loc[tempList[0], '单位']
+            i = i + 1
+              
+    def saveTax(self,):
+        with pd.ExcelWriter('E:/autoWork/TAXout.xlsx') as writer:
+            delivery.to_excel(writer, sheet_name='deliver')
+            newPayTax.to_excel(writer, sheet_name='payTax')
+        
+
+if __name__ == '__main__':
+    print('------------请注意-------------------')
+    print('----输入的成品编码不能有重复！------')
+    D = deliveryAndTax()
+    D.importFile()
+    D.mergePlan()
+    D.PlanToDe()
+    D.sapToTax()
+    D.mergeDupl()
+    D.saveTax()
+    print('更改完成！')
+    #input()
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
