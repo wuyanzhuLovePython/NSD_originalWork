@@ -132,16 +132,16 @@ def spliteReports():
         print(tempindex)
         #获取excel表中的row数据
         if len(tempindex):
-            headRow = tempindex[0] + 2 
-            lastRow = tempindex[-1] + 2
             
-            keyProdSheet.delete_rows(lastRow+1, len(keyProducts)+3)
-            if headRow == 4:
-                pass
-            else:
-                keyProdSheet.delete_rows(5, headRow-1)
+            deleteList = list(tempindex)
+            deleteList = [i+2 for i in deleteList]
+            deleteList = list(set(keyProductsList) - set(deleteList))
+            deleteList.sort(reverse=True)
+            
+            for i in deleteList:
+                keyProdSheet.delete_rows(i)
         else:
-            keyProdSheet.delete_rows(5, len(keyProducts)+3)
+            pass
         
         sheetName = "-".join(['2021年重点产品', rigionName])
 
@@ -173,7 +173,7 @@ def spliteReports():
         addr = 'D:\\运行结果\\' + rigionName + '.xlsx'
         operationExcel.save(addr)
         
-        break
+        
         
         
         
