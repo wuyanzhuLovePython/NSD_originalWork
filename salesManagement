@@ -1,0 +1,207 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May 31 22:45:02 2021
+
+@author: 吴彦祖的laptop
+"""
+
+import pandas as pd
+import openpyxl as vb
+import time
+
+
+
+def importFiles():
+    
+    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\salesManagement1.xlsx'
+    
+    
+    data = pd.read_excel(addr, sheet_name=None)
+    print(data.keys())
+    
+    totalReport = data['总表']
+    client = data['客户']
+    regionalSeries = data['区域系列']
+    clientSeries = data['系列客户']
+    keyProducts = data['2021年重点产品']
+    
+    return (totalReport, client, regionalSeries, clientSeries, keyProducts)
+
+def importExcel():
+    
+    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\salesManagement1.xlsx'
+    
+    vbExcel = vb.load_workbook(addr)
+    
+    return vbExcel
+
+def spliteReports():
+    
+    
+    #修改表头
+    reportsList = [totalReport, client, regionalSeries, clientSeries, keyProducts]
+    for i in reportsList:
+        i.columns = list(range(len(i.keys())))
+    
+    #分解总表
+    totalReport[1] = totalReport[1].apply(str)
+    tempindex = totalReport.loc[totalReport[1].str.contains('类别')].index
+    print(list(tempindex))
+    indexList = list(tempindex)
+    
+    seriesList = ['亚太区', '英国区', '俄罗斯区', '日本区', '东亚', '中东非', '南美区', 'SCC', '澳洲', '俄意英', 'SCC-ABR', '东欧区', '德国区', '意西区', '北美区', '德东法', '法荷区'] 
+    print(seriesList, len(seriesList))
+    
+    reportsList = []
+    keyProductsList = list(range(3, len(keyProducts)+2))
+    for index in indexList:
+        
+        operationExcel = importExcel()
+        totalSheet = operationExcel['总表']
+        #处理总表
+        rigionName = totalReport.loc[index+3, 2]#获取当前区域
+        sheetName = "-".join(['总表', rigionName])
+        # if rigionName == '德国区':
+        #     continue
+        #获取excel表中的row数据
+        headRow = index 
+        lastRow = index + 9
+        print(headRow, lastRow)
+        
+        totalSheet.delete_rows(lastRow+1, len(totalReport)+1)
+        if headRow == 2:
+            pass
+        else:
+            totalSheet.delete_rows(6, headRow-1)
+        
+        #处理客户表
+        #规律 excel的索引 == index + 2
+        clientSheet = operationExcel['客户']
+        client[1] = client[1].apply(str)
+        client[0] = client[0].apply(str)
+        tempindex = client.loc[client[1].str.contains(rigionName)].index
+        if len(tempindex) == 0:
+            tempindex = client.loc[client[0].str.contains(rigionName)].index
+        print(tempindex, rigionName, '客户')
+        #获取excel表中的row数据
+        if len(tempindex) :
+            headRow = tempindex[0] + 2 
+            lastRow = tempindex[-1] + 2
+            print('{}客户表的第一行为{}, 最后一行为{}'.format(rigionName, headRow, lastRow))
+            
+            clientSheet.delete_rows(lastRow+1, len(client)+3)
+            if headRow == 5:
+                pass
+            else:
+                clientSheet.delete_rows(5, headRow-1)
+            
+        else:
+            clientSheet.delete_rows(5, len(client)+3)#全部删
+        sheetName = "-".join(['客户', rigionName])
+        print(rigionName, '客户', '运行成功！')
+
+        
+        #处理系列客户
+        cliSeriesSheet = operationExcel['系列客户']
+        clientSeries[0] = clientSeries[0].apply(str)
+        tempindex = clientSeries.loc[clientSeries[0].str.contains(rigionName)].index
+        #获取excel表中的row数据
+        if len(tempindex):
+            headRow = tempindex[0] + 2 
+            lastRow = tempindex[-1] + 2
+            
+            cliSeriesSheet.delete_rows(lastRow+1, len(clientSeries)+3)
+            if headRow == 5:
+                pass
+            else:
+                cliSeriesSheet.delete_rows(5, headRow-1)
+        else:
+            cliSeriesSheet.delete_rows(5, len(clientSeries)+3)
+
+        sheetName = "-".join(['系列客户', rigionName])
+        print(rigionName, '系列客户', '运行成功！')
+
+        
+        #重点产品
+        keyProdSheet = operationExcel['2021年重点产品']
+        keyProducts[1] = keyProducts[1].apply(str)
+        keyProducts[2] = keyProducts[2].apply(str)
+        tempindex = keyProducts.loc[keyProducts[2].str.contains(rigionName)].index
+        if len(tempindex) == 0:
+            tempindex = keyProducts.loc[keyProducts[1].str.contains(rigionName)].index
+        print(tempindex)
+        #获取excel表中的row数据
+        if len(tempindex):
+            headRow = tempindex[0] + 2 
+            lastRow = tempindex[-1] + 2
+            
+            keyProdSheet.delete_rows(lastRow+1, len(keyProducts)+3)
+            if headRow == 4:
+                pass
+            else:
+                keyProdSheet.delete_rows(5, headRow-1)
+        else:
+            keyProdSheet.delete_rows(5, len(keyProducts)+3)
+        
+        sheetName = "-".join(['2021年重点产品', rigionName])
+
+        
+        #区域系列
+        regionalSerSheet = operationExcel['区域系列']
+        regionalSeries[1] = regionalSeries[1].apply(str)
+        regionalSeries[0] = regionalSeries[0].apply(str)
+        tempindex = regionalSeries.loc[regionalSeries[1].str.contains(rigionName)].index
+        if len(tempindex) == 0:
+            tempindex = regionalSeries.loc[regionalSeries[0].str.contains(rigionName)].index
+        print(tempindex, len(tempindex), rigionName)
+        
+        #获取excel表中的row数据
+        if len(tempindex):
+            headRow = tempindex[0] + 2 
+            lastRow = tempindex[-1] + 2
+            regionalSerSheet.delete_rows(lastRow+1, len(regionalSeries)+3)
+            if headRow == 5:
+                pass
+            else:
+                regionalSerSheet.delete_rows(5, headRow-1)
+            
+        else:
+            regionalSerSheet.delete_rows(5, len(regionalSeries)+3)
+        
+        sheetName = "-".join(['区域系列', rigionName])
+        
+        addr = 'D:\\运行结果\\' + rigionName + '.xlsx'
+        operationExcel.save(addr)
+        
+        break
+        
+        
+        
+
+def saveFiles1(report, sheetName):
+    
+    fileName = '运营资料' + time.strftime("%Y-%m-%d", time.localtime()) + '.xlsx'
+    addr = 'D:\\运行结果\\' + fileName
+    j = 0
+    with pd.ExcelWriter(addr) as writer:
+        for i in report:
+            i.to_excel(writer, sheet_name=str(sheetName[j]))
+            j += 1
+
+    
+    
+if __name__ == '__main__':
+    (totalReport, client, regionalSeries, clientSeries, keyProducts) = importFiles()
+
+    spliteReports()
+    
+    # testList = [totalReport, client, regionalSeries, clientSeries, keyProducts]
+    # print(type(testList), len(testList))
+    # name = list(range(5))
+    # print(name)
+    
+    # saveFiles1(testList, name)
+    
+    
+    
+    
