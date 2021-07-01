@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 """
+Created on Thu May 27 22:07:38 2021
+
+@author: 吴彦祖的laptop
+"""
+# -*- coding: utf-8 -*-
+"""
 Created on Wed Oct 28 08:43:14 2020
 
 @author: wanpeng.xie
@@ -7,13 +13,14 @@ Created on Wed Oct 28 08:43:14 2020
 
 import pandas as pd
 import numpy as np
+import openpyxl as op
 
 
 
 class deliveryAndTax:
     
     def importFile(self, ):
-        addr = 'E:/autoWork/TAX.xlsx'
+        addr = 'C:/Users/吴彦祖的laptop/Desktop/company/TAX.xlsx'
         global planData, sapData, delivery, payTax, newPayTax, newPlanData
         
         planData = pd.read_excel(addr, 'Sheet1')
@@ -133,9 +140,10 @@ class deliveryAndTax:
         
         #以半成品编码为核心，对sapData进行遍历和筛选
         i = 0
-        for code in halfGoodCode:
+        #从原始表一行一行过，看每一行需要补多少税，最后再合并
+        for pIndex in range(len(planData)):
             for index in range(sapLenght):
-                if sapData.loc[index, '父件编码'] == code:
+                if sapData.loc[index, '父件编码'] == planData.loc[pIndex, '半成品编码']:
                     subCode = sapData.loc[index, '子件编码']
                     subDesc = sapData.loc[index, '子件描述']
         
@@ -147,22 +155,22 @@ class deliveryAndTax:
                     #处理主要需要消耗的碳粉
                     if sapData.loc[index, '子件单位'] == 'KG':
                         num = sapData.loc[index, '子件用量']
-                        payTax.loc[i, '数量'] = num * float(planData.loc[halfGoodCode.index(code), '数量'])
+                        payTax.loc[i, '数量'] = num * float(planData.loc[pIndex, '数量'])
                         payTax.loc[i, '单位'] = 'KG'
-                        print('KG:' ,num, planData.loc[halfGoodCode.index(code), '数量'])
+                        print('KG:' ,num, planData.loc[pIndex, '数量'])
                     
                     #处理按g的碳粉
                     elif sapData.loc[index, '子件单位'] == 'G':
                         num = float(sapData.loc[index, '子件用量']) * 0.001
-                        payTax.loc[i, '数量'] = num * float(planData.loc[halfGoodCode.index(code), '数量'])
+                        payTax.loc[i, '数量'] = num * float(planData.loc[pIndex, '数量'])
                         payTax.loc[i, '单位'] = 'KG'
-                        print('G:',num, planData.loc[halfGoodCode.index(code), '数量'])
+                        print('G:',num, planData.loc[pIndex, '数量'])
                         
                         
                     #其他的基本上是和数量是一一对应的
                     else:
                         num = sapData.loc[index, '子件用量']
-                        payTax.loc[i, '数量'] = num * planData.loc[halfGoodCode.index(code), '数量']
+                        payTax.loc[i, '数量'] = num * planData.loc[pIndex, '数量']
                         payTax.loc[i, '单位'] = 'PCS'
                     i = i + 1
     
@@ -186,10 +194,43 @@ class deliveryAndTax:
             i = i + 1
               
     def saveTax(self,):
-        with pd.ExcelWriter('E:/autoWork/TAXout.xlsx') as writer:
-            delivery.to_excel(writer, sheet_name='deliver')
-            newPayTax.to_excel(writer, sheet_name='payTax')
         
+        addr = 'C:/Users/吴彦祖的laptop/Desktop/company/补税模板.xlsx'
+        
+        excel = op.load_workbook(addr)
+        s = excel['转储']['B7':'M52']
+        rowsLen = len(s[0])
+        colLen = len(s)
+        print(rowsLen, colLen)
+        
+        print('--------------测试OPenPYXL-----------------------')
+        print(len(delivery.loc[:, '转出物料号':'批次']))
+        testList = []
+        for i in range(len(delivery.loc[:, '转出物料号':'批次'])):
+            testList.append(list(delivery.loc[i, '转出物料号':'批次']))
+        
+        testList1 = []
+        for i in testList:
+            for j in i:
+                testList1.append(j)
+        
+        
+        #开始赋值,只对转储
+        flag = 0
+        for i in s:
+            for j in i:
+                j.value = testList1[flag]
+                print(j, j.value)
+                if testList1[flag] == testList1[-1]:
+                    break
+                flag += 1
+            #跳出循环后会执行下面的if语句，把跳出循环的条件再次执行就OK 
+            if testList1[flag] == testList1[-1]:
+                break
+        
+        saveAddr = 'C:/Users/吴彦祖的laptop/Desktop/company/补税模板1.xlsx'
+        excel.save(saveAddr)
+
 
 if __name__ == '__main__':
     print('------------请注意-------------------')
@@ -205,12 +246,5 @@ if __name__ == '__main__':
     #input()
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
