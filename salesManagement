@@ -34,6 +34,17 @@ def importExcel():
     
     return vbExcel
 
+del creatDict():
+    
+    for i in deleteList:
+    nextDel = deleteList[deleteList.index(i) + 1]
+    print(i, nextDel)
+    if nextDel - i > 1:
+        dictDele[i] = nextDel
+        print(i, nextDel)
+
+    return nextDel    
+
 def dealTotalReport(operationExcel, index):
     
     totalSheet = operationExcel['总表']
@@ -52,11 +63,11 @@ def dealTotalReport(operationExcel, index):
         elif i.value == '数量':
             headTempList.append(i.row)
     
-    contentGap = 3 + (lastTempList[0] + headTempList[0]) #3是表头长度，列表相减是内容长度
+    contentGap = 3 + (lastTempList[0] - headTempList[0] + 1) #3是表头长度，列表相减是内容长度
     
     headRow = index
     lastRow = index + contentGap
-    print(headRow, lastRow)
+    print(headRow, lastRow, contentGap)
     
     totalSheet.delete_rows(lastRow+1, lastTempList[-1])
     if headRow == 2:
@@ -76,19 +87,29 @@ def clientReport(operationExcel, index, rigionName):
         tempindex = client.loc[client[0].str.contains(rigionName)].index
     print(tempindex, rigionName, '客户')
     #获取excel表中的row数据
-    if len(tempindex) :
-        headRow = tempindex[0] + 2 
-        lastRow = tempindex[-1] + 2
-        print('{}客户表的第一行为{}, 最后一行为{}'.format(rigionName, headRow, lastRow))
+    clientList = list(range(5, len(client)+2))
+    #获取excel表中的row数据
+    if len(tempindex):
         
-        clientSheet.delete_rows(lastRow+1, len(client)+1)
-        if headRow == 5:
-            pass
-        else:
-            clientSheet.delete_rows(5, headRow-1)
+        print('以下是删除的列表')
+        deleteList = list(tempindex)#需要删除的index
+        print(deleteList)
+        deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
+        print(deleteList)
+        deleteList = list(set(clientList) - set(deleteList))#剔除不该删除的
+        print(deleteList)
+        deleteList.sort(reverse=True)#设置顺序，从后往前删除
+        print(deleteList)
         
+        print('删除的为以上，客户')
+
+        
+            
+        
+        for i in deleteList:
+            clientSheet.delete_rows(i)
     else:
-        clientSheet.delete_rows(5, len(client)+1)#全部删
+        pass
 
     print(rigionName, '客户', '运行成功！')
     
@@ -102,23 +123,31 @@ def clientSeriesReport(operationExcel, index, rigionName):
     if len(tempindex) == 0:
         tempindex = client.loc[client[0].str.contains(rigionName)].index
     #获取excel表中的row数据
+    clientSeriesList = list(range(5, len(clientSeries)+2))
+    #获取excel表中的row数据
     if len(tempindex):
-        headRow = tempindex[0] + 2 
-        lastRow = tempindex[-1] + 2
         
-        print('客户的表头{},表尾{}, 总列表{}'.format(headRow, lastRow, tempindex))
-        cliSeriesSheet.delete_rows(lastRow+1, len(clientSeries)+2)
-        if headRow == 5:
-            pass
-        else:
-            cliSeriesSheet.delete_rows(5, headRow-1)
+        print('以下是删除的列表')
+        deleteList = list(tempindex)#需要删除的index
+        print(deleteList)
+        deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
+        print(deleteList)
+        deleteList = list(set(clientSeriesList) - set(deleteList))#剔除不该删除的
+        print(deleteList)
+        deleteList.sort(reverse=True)#设置顺序，从后往前删除
+        print(deleteList)
+        
+        print('删除的为以上，系列客户')
+        for i in deleteList:
+            cliSeriesSheet.delete_rows(i)
+            print('当前删除进度:', i)
     else:
-        cliSeriesSheet.delete_rows(5, len(clientSeries)+2)
+        pass
 
 
     print(rigionName, '系列客户', '运行成功！')
     
-def keyProductsReport(operationExcel, rigionName, keyProductsList):
+def keyProductsReport(operationExcel, rigionName):
     
     keyProdSheet = operationExcel['2021年重点产品']
     keyProducts[1] = keyProducts[1].apply(str)
@@ -127,14 +156,22 @@ def keyProductsReport(operationExcel, rigionName, keyProductsList):
     if len(tempindex) == 0:
         tempindex = keyProducts.loc[keyProducts[1].str.contains(rigionName)].index
     print(tempindex)
+    
+    keyProductsList = list(range(4, len(keyProducts)+2))
     #获取excel表中的row数据
     if len(tempindex):
         
-        deleteList = list(tempindex)
-        deleteList = [i+2 for i in deleteList]
-        deleteList = list(set(keyProductsList) - set(deleteList))
-        deleteList.sort(reverse=True)
+        print('以下是删除的列表')
+        deleteList = list(tempindex)#需要删除的index
+        print(deleteList)
+        deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
+        print(deleteList)
+        deleteList = list(set(keyProductsList) - set(deleteList))#剔除不该删除的
+        print(deleteList)
+        deleteList.sort(reverse=True)#设置顺序，从后往前删除
+        print(deleteList)
         
+        print('删除的为以上，重点产品')
         for i in deleteList:
             keyProdSheet.delete_rows(i)
     else:
@@ -151,17 +188,27 @@ def regionalSeriesReport(operationExcel, rigionName):
     print(tempindex, len(tempindex), rigionName)
     
     #获取excel表中的row数据
+    regionalSeriesList = list(range(5, len(regionalSeries)+2))
+    #获取excel表中的row数据
     if len(tempindex):
-        headRow = tempindex[0] + 2 
-        lastRow = tempindex[-1] + 2
-        regionalSerSheet.delete_rows(lastRow+1, len(regionalSeries)+3)
-        if headRow == 5:
-            pass
-        else:
-            regionalSerSheet.delete_rows(5, headRow-1)
         
+        print('以下是删除的列表')
+        deleteList = list(tempindex)#需要删除的index
+        print(deleteList)
+        deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
+        print(deleteList)
+        deleteList = list(set(regionalSeriesList) - set(deleteList))#剔除不该删除的
+        print(deleteList)
+        deleteList.sort(reverse=True)#设置顺序，从后往前删除
+        print(deleteList)
+        
+        print('删除的为以上，区域系列')
+        
+        
+        for i in deleteList:
+            regionalSerSheet.delete_rows(i)
     else:
-        regionalSerSheet.delete_rows(5, len(regionalSeries)+3)
+        pass
 
 def spliteReports():
     
@@ -181,7 +228,6 @@ def spliteReports():
     print(seriesList, len(seriesList))
     
     reportsList = []
-    keyProductsList = list(range(4, len(keyProducts)+2))
     for index in indexList:
         
         operationExcel = importExcel()
@@ -201,7 +247,7 @@ def spliteReports():
 
         
         #重点产品
-        keyProductsReport(operationExcel, rigionName, keyProductsList)
+        keyProductsReport(operationExcel, rigionName)
         
         
 
@@ -212,6 +258,8 @@ def spliteReports():
         
         addr = 'D:\\运行结果\\' + rigionName + '.xlsx'
         operationExcel.save(addr)
+        
+        break
         
         
  
