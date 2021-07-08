@@ -12,7 +12,7 @@ import openpyxl as vb
 
 def importFiles():
     
-    addr = 'C:\\Users\\吴彦祖的laptop\\Desktop\\company\\2021年（6）月第（4周） 运营资料-2021.6.22-总.xlsx'
+    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\2021年（6）月第（4周） 运营资料-2021.6.22-总(1).xlsx'
     
     
     data = pd.read_excel(addr, sheet_name=None)
@@ -28,22 +28,35 @@ def importFiles():
 
 def importExcel():
     
-    addr = 'C:\\Users\\吴彦祖的laptop\\Desktop\\company\\2021年（6）月第（4周） 运营资料-2021.6.22-总.xlsx'
+    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\2021年（6）月第（4周） 运营资料-2021.6.22-总(1).xlsx'
     
     vbExcel = vb.load_workbook(addr)
     
     return vbExcel
 
-del creatDict():
+def creatDict(deleteList, dictDele):
     
+    tempList = []
+    tempList.append(deleteList[0])
     for i in deleteList:
-    nextDel = deleteList[deleteList.index(i) + 1]
-    print(i, nextDel)
-    if nextDel - i > 1:
-        dictDele[i] = nextDel
-        print(i, nextDel)
-
-    return nextDel    
+        try:
+            nextDel = deleteList[deleteList.index(i) + 1]#nextDel 是列表当前遍历元素的下一个
+        except:
+            tempList.append(i)
+        #print(i, nextDel)
+    
+        if i - nextDel > 1:
+            tempList.append(i)
+            tempList.append(nextDel)
+            
+        #将列表转化成字典    
+        for i in tempList:
+            if i == tempList[-1]:
+                break
+            if len(tempList[0:tempList.index(i)])%2 == 0:
+                dictDele[i] = tempList[tempList.index(i)+1]     
+                
+    return dictDele    
 
 def dealTotalReport(operationExcel, index):
     
@@ -97,17 +110,19 @@ def clientReport(operationExcel, index, rigionName):
         deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
         print(deleteList)
         deleteList = list(set(clientList) - set(deleteList))#剔除不该删除的
-        print(deleteList)
         deleteList.sort(reverse=True)#设置顺序，从后往前删除
-        print(deleteList)
+
         
         print('删除的为以上，客户')
 
         
-            
+        delDict = {}
+        delDict = creatDict(deleteList, delDict)
+        print('当前删除的列表为：',delDict)
         
-        for i in deleteList:
-            clientSheet.delete_rows(i)
+        for head, last in delDict.items():
+            clientSheet.delete_rows(last, head)
+            
     else:
         pass
 
@@ -133,14 +148,18 @@ def clientSeriesReport(operationExcel, index, rigionName):
         deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
         print(deleteList)
         deleteList = list(set(clientSeriesList) - set(deleteList))#剔除不该删除的
-        print(deleteList)
         deleteList.sort(reverse=True)#设置顺序，从后往前删除
-        print(deleteList)
+
         
-        print('删除的为以上，系列客户')
-        for i in deleteList:
-            cliSeriesSheet.delete_rows(i)
-            print('当前删除进度:', i)
+        
+        
+        delDict = {}
+        delDict = creatDict(deleteList, delDict)
+        print('当前删除的列表为：',delDict)
+        
+        for head, last in delDict.items():
+            cliSeriesSheet.delete_rows(last, head)
+
     else:
         pass
 
@@ -167,13 +186,17 @@ def keyProductsReport(operationExcel, rigionName):
         deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
         print(deleteList)
         deleteList = list(set(keyProductsList) - set(deleteList))#剔除不该删除的
-        print(deleteList)
         deleteList.sort(reverse=True)#设置顺序，从后往前删除
-        print(deleteList)
+
         
-        print('删除的为以上，重点产品')
-        for i in deleteList:
-            keyProdSheet.delete_rows(i)
+        
+        
+        delDict = {}
+        delDict = creatDict(deleteList, delDict)
+        print('当前删除的列表为：', delDict)
+        
+        for head, last in delDict.items():
+            keyProdSheet.delete_rows(last, head)
     else:
         pass
     
@@ -198,15 +221,18 @@ def regionalSeriesReport(operationExcel, rigionName):
         deleteList = [i+2 for i in deleteList]#将dataframe的格式转化为excel的样子
         print(deleteList)
         deleteList = list(set(regionalSeriesList) - set(deleteList))#剔除不该删除的
-        print(deleteList)
         deleteList.sort(reverse=True)#设置顺序，从后往前删除
-        print(deleteList)
-        
-        print('删除的为以上，区域系列')
         
         
-        for i in deleteList:
-            regionalSerSheet.delete_rows(i)
+        
+        delDict = {}
+        delDict = creatDict(deleteList, delDict)
+        print('当前删除的列表为：',delDict)
+        
+        for head, last in delDict.items():
+            regionalSerSheet.delete_rows(last, head)
+                    
+            
     else:
         pass
 
@@ -279,16 +305,5 @@ def spliteReports():
     
 if __name__ == '__main__':
     (totalReport, client, regionalSeries, clientSeries, keyProducts) = importFiles()
-
+    
     spliteReports()
-    
-    # testList = [totalReport, client, regionalSeries, clientSeries, keyProducts]
-    # print(type(testList), len(testList))
-    # name = list(range(5))
-    # print(name)
-    
-    # saveFiles1(testList, name)
-    
-    
-    
-    
