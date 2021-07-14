@@ -12,7 +12,7 @@ import openpyxl as vb
 
 def importFiles():
     
-    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\2021年（6）月第（4周） 运营资料-2021.6.22-总(1).xlsx'
+    addr = 'C:\\Users\\吴彦祖的laptop\\Desktop\\company\\2021年（6）月第（4周） 运营资料-2021.6.22-总.xlsx'
     
     
     data = pd.read_excel(addr, sheet_name=None)
@@ -28,7 +28,7 @@ def importFiles():
 
 def importExcel():
     
-    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\2021年（6）月第（4周） 运营资料-2021.6.22-总(1).xlsx'
+    addr = 'C:\\Users\\吴彦祖的laptop\\Desktop\\company\\2021年（6）月第（4周） 运营资料-2021.6.22-总.xlsx'
     
     vbExcel = vb.load_workbook(addr)
     
@@ -121,7 +121,12 @@ def clientReport(operationExcel, index, rigionName):
         print('当前删除的列表为：',delDict)
         
         for head, last in delDict.items():
-            clientSheet.delete_rows(last, head)
+            if last == len(client)+2 :
+                clientSheet.delete_rows(last, head)
+            else:
+                head = head - (last-1)
+                clientSheet.delete_rows(last, head)
+            
             
     else:
         pass
@@ -158,7 +163,11 @@ def clientSeriesReport(operationExcel, index, rigionName):
         print('当前删除的列表为：',delDict)
         
         for head, last in delDict.items():
-            cliSeriesSheet.delete_rows(last, head)
+            if last == len(clientSeries)+2 :
+                cliSeriesSheet.delete_rows(last, head)
+            else:
+                head = head - (last-1)
+                cliSeriesSheet.delete_rows(last, head)
 
     else:
         pass
@@ -190,13 +199,10 @@ def keyProductsReport(operationExcel, rigionName):
 
         
         
-        
-        delDict = {}
-        delDict = creatDict(deleteList, delDict)
-        print('当前删除的列表为：', delDict)
-        
-        for head, last in delDict.items():
-            keyProdSheet.delete_rows(last, head)
+        #重点产品不需要区域删除
+       
+        for i in deleteList:
+            keyProdSheet.delete_rows(i)
     else:
         pass
     
@@ -230,6 +236,7 @@ def regionalSeriesReport(operationExcel, rigionName):
         print('当前删除的列表为：',delDict)
         
         for head, last in delDict.items():
+            head = head - (last-1)
             regionalSerSheet.delete_rows(last, head)
                     
             
@@ -285,7 +292,7 @@ def spliteReports():
         addr = 'D:\\运行结果\\' + rigionName + '.xlsx'
         operationExcel.save(addr)
         
-        break
+        
         
         
  
