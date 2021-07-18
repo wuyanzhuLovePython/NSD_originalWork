@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jul  2 20:46:36 2021
+Created on Sun Jul 18 16:13:58 2021
 
-@author: wanpeng.xie
+@author: 吴彦祖的laptop
 """
 
 import pandas as pd
@@ -25,7 +25,7 @@ def needTime(reports):
 def cleanData():
     
     #导入数据
-    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\欠料表.xlsx'
+    addr = r'C:\Users\吴彦祖的laptop\Desktop\company\欠料表.xlsx'
     data = pd.read_excel(addr, sheet_name=None)
     #获取原始缺料表
     shortageSo = data['销售订单物料缺料分析报表 (10)']
@@ -45,6 +45,17 @@ def cleanData():
     #将系统表的列按照我们习惯摆放
     for column in headList:
         headSo[column] = shortageSo[column]
+        
+    #将到料信息备注改变，是寄售的就处理，不是寄售就把数字变为空
+    consignment_list = list(data['寄售'].loc[:,'编码'])
+    #如果是string类型，要变成数值类型
+    index = 0
+    for i in consignment_list:
+        consignment_list[index] = int(i)
+        index += 1
+    consignment_list = tuple(consignment_list)# type of tuple have more perform than list in the key of In
+    
+    headSo['到料信息备注'] = headSo['对应物料组件编码'].apply(lambda x: '寄售' if (x in consignment_list) else '')
     
     return headSo
 
@@ -66,6 +77,7 @@ def operateData(headSo):
     
     #整理我司需求
     headSo['我司需求'] = headSo.apply(needTime, axis=1) 
+    
     
     return headSo
 
