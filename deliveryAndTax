@@ -14,13 +14,14 @@ Created on Wed Oct 28 08:43:14 2020
 import pandas as pd
 import numpy as np
 import openpyxl as op
+import time
 
 
 
 class deliveryAndTax:
     
     def importFile(self, ):
-        addr = 'C:/Users/吴彦祖的laptop/Desktop/company/TAX.xlsx'
+        addr = 'C:\\Users\\wanpeng.xie\\Desktop\\TAX.xlsx'
         global planData, sapData, delivery, payTax, newPayTax, newPlanData
         
         planData = pd.read_excel(addr, 'Sheet1')
@@ -195,8 +196,9 @@ class deliveryAndTax:
               
     def saveTax(self,):
         
-        addr = 'C:/Users/吴彦祖的laptop/Desktop/company/补税模板.xlsx'
+        addr = 'C:\\Users\\wanpeng.xie\\Desktop\\补税模板.xlsx'
         
+        #操作转储部分
         excel = op.load_workbook(addr)
         s = excel['转储']['B7':'M52']
         rowsLen = len(s[0])
@@ -205,30 +207,71 @@ class deliveryAndTax:
         
         print('--------------测试OPenPYXL-----------------------')
         print(len(delivery.loc[:, '转出物料号':'批次']))
+        headList = list(delivery.loc[:, '转出物料号':'批次'].keys())
         testList = []
-        for i in range(len(delivery.loc[:, '转出物料号':'批次'])):
-            testList.append(list(delivery.loc[i, '转出物料号':'批次']))
         
-        testList1 = []
-        for i in testList:
-            for j in i:
-                testList1.append(j)
+        delivery.loc[:, '转出物料号':'批次'].apply(lambda x : [testList.append(x[col]) for col in headList], axis=1)
+        #删除重复的第一行
+        testList = testList[len(delivery.loc[:, '转出物料号':'批次'].keys()):]
         
+        print('转储列表内容：',testList)
         
+        #设置一下时间
+        excel['转储']['J5'].value = time.strftime('%Y-%m-%d', time.localtime())
         #开始赋值,只对转储
         flag = 0
         for i in s:
             for j in i:
-                j.value = testList1[flag]
+                j.value = testList[flag]
                 print(j, j.value)
-                if testList1[flag] == testList1[-1]:
+                if testList[flag] == testList[-1]:
                     break
                 flag += 1
             #跳出循环后会执行下面的if语句，把跳出循环的条件再次执行就OK 
-            if testList1[flag] == testList1[-1]:
+            if testList[flag] == testList[-1]:
                 break
         
-        saveAddr = 'C:/Users/吴彦祖的laptop/Desktop/company/补税模板1.xlsx'
+        #操作补税部分
+        v = excel['补税']['B6':'E27']
+        taxHeadList = list(newPayTax.loc[:, '物料号':'数量'])
+        testList = []
+        
+        #这个是超级代码，函数式编程终极使用。但美中不足是会重复加第一行。。。。。而且目前还没找到问题
+        newPayTax.loc[:, '物料号':'数量'].apply(lambda x : [testList.append(x[col]) for col in taxHeadList], axis=1)
+        #删除重复的第一行
+        testList = testList[len(newPayTax.loc[:, '物料号':'数量'].keys()):]#左闭右开，填-1取不到最后一个。
+        print('补税列表内容：',testList)
+        
+        #设置时间
+        excel['补税']['H4'].value = time.strftime('%Y-%m-%d', time.localtime())
+        
+        flag = 0
+        for i in v:
+            for j in i:
+                j.value = testList[flag]
+                print(j, j.value)
+                if testList[flag] == testList[-1]:
+                    break
+                flag += 1
+            #跳出循环后会执行下面的if语句，把跳出循环的条件再次执行就OK 
+            if testList[flag] == testList[-1]:
+                break
+        
+        halfGood = ''
+        toner = ''
+        drum = ''
+        
+        for cell in list(delivery.loc[:, '转出物料描述']):
+            if '半成品' in cell:
+                halfGood = '半成品'
+            elif '碳粉' in cell:
+                toner = '碳粉'
+            elif '感光鼓' in cell:
+                drum = '感光鼓'
+        
+        fileName = time.strftime('%Y-%m-%d', time.localtime()) + '' + halfGood + toner + drum + '.xlsx'
+        
+        saveAddr = 'C:\\Users\\wanpeng.xie\\Desktop\\补税\\2021年七月\\' + fileName
         excel.save(saveAddr)
 
 
@@ -245,6 +288,3 @@ if __name__ == '__main__':
     print('更改完成！')
     #input()
     
-    
-
-
