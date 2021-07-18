@@ -1,0 +1,83 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jul  2 20:46:36 2021
+
+@author: wanpeng.xie
+"""
+
+import pandas as pd
+import numpy as np
+import datetime, time
+
+
+def needTime(reports):
+    if type(reports['工厂交期']) == datetime.datetime:
+        if reports[0] == '成品层':
+            if '2160' in reports['物料组描述（成品）'] or '2460' in reports['物料组描述（成品）']:
+                reports['我司需求'] = reports['工厂交期'] - datetime.timedelta(days=10)
+            else:
+                reports['我司需求'] = reports['工厂交期'] - datetime.timedelta(days=6)
+        else:
+            reports['我司需求'] = reports['工厂交期'] - datetime.timedelta(days=10)
+
+    return reports['我司需求']
+
+def cleanData():
+    
+    #导入数据
+    addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动化\\欠料表.xlsx'
+    data = pd.read_excel(addr, sheet_name=None)
+    #获取原始缺料表
+    shortageSo = data['销售订单物料缺料分析报表 (10)']
+    
+    #获取表头
+    headSoList = list(data['SOhead'].keys())
+    headList = list(data['head'].keys())
+    
+    #获取即将创建的表的长和宽
+    totalCell = len(headSoList) * len(shortageSo)
+    #创建表
+    headSo = pd.DataFrame(np.arange(totalCell).reshape((len(shortageSo), len(headSoList))), columns=headSoList)
+    
+    #英文表头切换成中文
+    shortageSo.columns = headList
+    
+    #将系统表的列按照我们习惯摆放
+    for column in headList:
+        headSo[column] = shortageSo[column]
+    
+    return headSo
+
+def operateData(headSo):
+    #选出芯片
+    headSo = headSo.loc[headSo['物料组描述（物料）'].str.contains('芯片专用|全新芯片')]
+    
+    #将销售订单合并成我们希望的样子
+    headSo['销售订单'] = headSo['销售订单'].apply(str)
+    headSo['SO号'] = headSo['销售订单'] + '/' + headSo['销售订单行项目']
+    headSo['SO号'] = headSo['SO号'].apply(lambda x:"".join(['0', x] if x[:2] == '46' else x))
+    
+    #判断是成品层还是半成品
+    headSo['BOM最后一次修改日期'] = headSo['BOM最后一次修改日期'].apply(str)
+    headSo[0] = headSo['BOM最后一次修改日期'].apply(lambda x : '成品层' if x != 'NaT' else '')
+    
+    #整理列表index
+    headSo.index = list(range(len(headSo)))
+    
+    #整理我司需求
+    headSo['我司需求'] = headSo.apply(needTime, axis=1) 
+    
+    return headSo
+
+def saveFiles(headSo):
+    fileName = '欠料表' + time.strftime("%Y-%m-%d", time.localtime()) + '.xlsx'
+    addr = 'D:\\运行结果\\' + fileName
+    
+    with pd.ExcelWriter(addr) as writer:
+        headSo.to_excel(writer, sheet_name='欠料表', index=False)
+
+if __name__ == '__main__':
+    df = cleanData()
+    df = operateData(df)
+    saveFiles(df)
+    
