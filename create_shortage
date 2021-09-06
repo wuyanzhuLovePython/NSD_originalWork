@@ -22,11 +22,21 @@ def needTime(reports):
 
     return reports['我司需求']
 
-def cleanData():
+def creat_dict(report, dic, string1, string2):#将透视的表变成字典
+        
+        dic[report[string1]] = report[string2]
+        
+        return dic
     
+def read_EXCL():
     #导入数据
-    addr = r'C:\Users\吴彦祖的laptop\Desktop\company\欠料表.xlsx'
+    addr = r'C:\Users\wanpeng.xie\Desktop\自动化\欠料表.xlsx'
     data = pd.read_excel(addr, sheet_name=None)
+    
+    return data
+    
+def cleanData(data):
+    
     #获取原始缺料表
     shortageSo = data['销售订单物料缺料分析报表 (10)']
     
@@ -46,22 +56,18 @@ def cleanData():
     for column in headList:
         headSo[column] = shortageSo[column]
         
-    #将到料信息备注改变，是寄售的就处理，不是寄售就把数字变为空
-    consignment_list = list(data['寄售'].loc[:,'编码'])
+    #备注叫料和寄售信息
+    consignment_dic = {}
     #如果是string类型，要变成数值类型
-    index = 0
-    for i in consignment_list:
-        consignment_list[index] = int(i)
-        index += 1
-    consignment_list = tuple(consignment_list)# type of tuple have more perform than list in the key of In
-    
-    headSo['到料信息备注'] = headSo['对应物料组件编码'].apply(lambda x: '寄售' if (x in consignment_list) else '')
-    
+    consignment_dic = data['寄售'].apply(creat_dict, args=(consignment_dic, '编码', '类型'), axis=1)[0]
+        
+    headSo['到料信息备注'] = headSo['对应物料组件编码'].apply(lambda x: consignment_dic[x] if (x in consignment_dic) else '')
+     
     return headSo
 
 def operateData(headSo):
     #选出芯片
-    headSo = headSo.loc[headSo['物料组描述（物料）'].str.contains('芯片专用|全新芯片')]
+    #headSo = headSo.loc[headSo['物料组描述（物料）'].str.contains('芯片专用|全新芯片')]
     
     #将销售订单合并成我们希望的样子
     headSo['销售订单'] = headSo['销售订单'].apply(str)
@@ -81,15 +87,61 @@ def operateData(headSo):
     
     return headSo
 
+def add_date(data, headSo):
+    delay = data['艳玲回复交期']
+    sap_date = data['PO实际交期']
+    
+    #先处理艳玲回复交期 
+    #将销售订单合并成我们希望的样子
+    delay['订单号'] = delay['订单号'].apply(str)
+    delay['订单项目'] = delay['订单项目'].apply(str)
+    delay['计划行'] = delay['计划行'].apply(str)
+    delay['SO号'] = delay['订单号'] + '/' + delay['订单项目'] + '_' + delay['计划行']
+    delay['SO号'] = delay['SO号'].apply(lambda x:"".join(['0', x] if x[:2] == '46' else x))
+    
+    delay_dic = {}
+    delay_dic = delay.apply(creat_dict, args=(delay_dic, 'SO号', '核实备注'), axis=1)[0]
+    print('艳玲延期', delay_dic)
+    #将艳玲回复加进去
+    headSo['前艳玲回复'] = headSo['SO号'].apply(lambda x: delay_dic[x] if (x in delay_dic) else '')
+    
+    #处理实际回复交期
+    #合并PO交期
+    sap_date = sap_date.drop(index=len(sap_date)-1)#最后一行为空，删除
+    sap_date['采购单号'] = sap_date['采购单号'].apply(lambda x : str(int(x)))
+    sap_date['项次'] = sap_date['项次'].apply(lambda x : str(int(x)))
+    sap_date['计划行号'] = sap_date['计划行号'].apply(lambda x : str(int(x)))
+    sap_date['PO核对'] = sap_date['采购单号'] +  + sap_date['项次'] + '_' + sap_date['计划行号']
+    
+
+    headSo['PO单号'] = headSo['PO单号'].apply(str)
+    headSo['PO核对'] = headSo.apply(lambda x : str(int(float(x['PO单号']))) + str(x['PO行号']) if len(x['PO单号']) > 3 else '', axis=1)
+    
+    date_dict = {}
+    date_dict = sap_date.apply(creat_dict, args=(date_dict, 'PO核对', '交货日期'), axis=1)[0]
+    print('PO交期', date_dict)
+    
+    #将PO交期核对准
+    headSo['PO交期'] = headSo['PO核对'].apply(lambda x: date_dict[x] if (x in date_dict) else '无交期')
+
+    return headSo
+
 def saveFiles(headSo):
     fileName = '欠料表' + time.strftime("%Y-%m-%d", time.localtime()) + '.xlsx'
     addr = 'D:\\运行结果\\' + fileName
     
     with pd.ExcelWriter(addr) as writer:
         headSo.to_excel(writer, sheet_name='欠料表', index=False)
-
-if __name__ == '__main__':
-    df = cleanData()
+        
+def main():
+    start_time = datetime.datetime.now()
+    data = read_EXCL()
+    df = cleanData(data)
     df = operateData(df)
+    df = add_date(data, df)
     saveFiles(df)
+    end_time = datetime.datetime.now()
+    print('程序耗时{}分'.format(((end_time-start_time).seconds / 60)))
     
+if __name__ == '__main__':
+    main()
