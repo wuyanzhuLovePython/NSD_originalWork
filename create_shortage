@@ -8,7 +8,7 @@ Created on Sun Jul 18 16:13:58 2021
 import pandas as pd
 import numpy as np
 import datetime, time
-
+import re
 
 def needTime(reports):
     if type(reports['工厂交期']) == datetime.datetime:
@@ -22,11 +22,69 @@ def needTime(reports):
 
     return reports['我司需求']
 
+def add_jit(report, jit_tuple):
+    
+    report['产品编码'] = str(report['产品编码'])
+    
+    if len(report['产品编码'])>12:
+        code = str(report['产品编码'])[6:18]
+    else:
+        code = report['产品编码']
+    
+    code = int(code)
+    
+    if code in jit_tuple:
+        report['N+2计划&JIT叫料'] = '包材JIT标识'
+    
+    return report
+
+def judge(report, series_dic, person):
+    '''
+    number:主数据管理员的代码
+    series：系列的数字
+    series——dic：系列对应的产线字典
+    person：记录对应关系的sheet表
+    '''
+    
+
+    #欠料表中判断属于哪个部门
+    number = str(report['主数据'])
+    series = str(report['数字系列'])
+    string = str(report['物料组描述（成品）'])
+    temp_index = person.loc[person['管理员'].str.contains(number)].index
+    
+    #不知道为啥会全选，那么打个补丁，全选的为0
+    if len(temp_index) == 10:
+        temp_index = ''
+    
+    if len(temp_index):
+        name = person.loc[temp_index, '姓名']
+        name_string = '、'.join(list(name))
+    
+        return name_string
+    else:
+        if series in series_dic:
+            return series_dic[series]
+        elif ('回收' in string) or ('粉筒' in string) or ('理光' in string) or ('施乐' in string) or ('OKI' in string) or ('京瓷' in string):
+            return 'PD11'
+
+
+def get_num(report):
+    #get number from string
+    report = str(report)
+    if len(report) > 1:
+        num = re.sub(r'\D', '', report)
+    else:
+        print(report)
+        
+    return num
+
 def creat_dict(report, dic, string1, string2):#将透视的表变成字典
         
         dic[report[string1]] = report[string2]
         
         return dic
+    
     
 def read_EXCL():
     #导入数据
@@ -90,6 +148,9 @@ def operateData(headSo):
 def add_date(data, headSo):
     delay = data['艳玲回复交期']
     sap_date = data['PO实际交期']
+    hand_account = data['手工账']
+    cor_relations = data['系列对应拉线']
+    person = data['负责人']
     
     #先处理艳玲回复交期 
     #将销售订单合并成我们希望的样子
@@ -123,7 +184,39 @@ def add_date(data, headSo):
     
     #将PO交期核对准
     headSo['PO交期'] = headSo['PO核对'].apply(lambda x: date_dict[x] if (x in date_dict) else '无交期')
-
+    
+    #添加JIT标识
+    jit_sign_tuple = set(list(hand_account.loc[hand_account['N+2计划&JIT叫料'] == '包材JIT标识']['物料号']))#将有jit标识的编码全部找出来
+    headSo = headSo.apply(add_jit, args=(jit_sign_tuple,), axis=1)
+    
+    #添加计划负责人
+    cor_relations['数字系列'] = cor_relations['父件物料组描述'].apply(get_num, args=())
+    
+    #获取数字系列对应的部门
+    temp_index = cor_relations.loc[cor_relations['部门'].str.contains('PD11')].index#把PD11的去除
+    cor_relations = cor_relations.drop(index=temp_index)
+    
+    miss = cor_relations['父件物料组描述'].isnull()#把空的值去掉
+    temp_index = miss.loc[miss == True].index
+    cor_relations = cor_relations.drop(index=temp_index)
+    
+    series_dic = {}
+    series_dic = cor_relations.apply(creat_dict, args=(series_dic, '数字系列', '部门'), axis=1)[0]
+    
+    headSo.insert(1, '计划负责人', 0)
+    
+    main_data_dict = {}#主数据管理员
+    main_data_dict = hand_account.apply(creat_dict, args=(main_data_dict, 'SO','主数据管理员'), axis=1)[0]
+    
+    headSo['主数据'] = headSo['SO号'].apply(lambda x : main_data_dict[x] if x in main_data_dict else '')
+    
+    #把欠料表中的系列转化成数字
+    headSo['数字系列'] = headSo['物料组描述（成品）'].apply(get_num, args=())
+    
+    #接下来就是根据两个字典，把计划负责人填上去，再根据主数据
+    #通过两个元素定位计划负责人：1、主数据管理员；2、产品系列
+    headSo['计划负责人'] = headSo.apply(judge, args=(series_dic, person), axis=1)    
+    
     return headSo
 
 def saveFiles(headSo):
