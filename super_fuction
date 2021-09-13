@@ -1,0 +1,32 @@
+"""
+Created on Mon Sep 13 21:21:33 2021
+
+@author: wanpeng.xie
+"""
+
+这个其实就是实现excel的自动数据透视，但是只是汇总求和，没有计数
+def changePivot(report, index_name, col_name_list):
+        ```
+        此函数实现的是, 输入大类，和任意列，都给你汇总结果
+        report:输入的表
+        index_name:需要汇总的大类
+        col_name_list：需要汇总数量的数据列.(注意，这个是输入列表！！)
+        ```
+        pivotTemp = report.pivot_table(index=[index_name], values = col_name_list, aggfunc = 'sum')
+        
+        lengths = len(pivotTemp)#获取长
+        wides = len(pivotTemp.keys()) + 1#获取宽
+        tempcolumns = [pivotTemp.index.name] + list(pivotTemp.keys()) #获取列
+        print(lengths, wides, tempcolumns)
+        tempData = pd.DataFrame(np.arange(lengths*wides).reshape((lengths, wides)), columns=tempcolumns)
+        
+        flag = 0
+        for column in tempcolumns:
+            if flag == 0:
+                tempData.loc[:, column] = list(pivotTemp.index)
+            else:
+                tempData.loc[:, column] = list(pivotTemp.loc[:, column])
+                
+            flag += 1
+        
+        return tempData
