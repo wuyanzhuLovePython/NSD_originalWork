@@ -4,7 +4,7 @@ Created on Mon Sep 13 21:21:33 2021
 @author: wanpeng.xie
 """
 
-这个其实就是实现excel的自动数据透视，但是只是汇总求和，没有计数
+#这个其实就是实现excel的自动数据透视，但是只是汇总求和，没有计数
 def changePivot(report, index_name, col_name_list):
         ```
         此函数实现的是, 输入大类，和任意列，都给你汇总结果
@@ -30,3 +30,25 @@ def changePivot(report, index_name, col_name_list):
             flag += 1
         
         return tempData
+
+def creat_dict(report, dic, string1, string2):#将透视的表变成字典
+        
+        dic[report[string1]] = report[string2]
+        
+        return dic
+
+#实现自动vlookup函数
+def vlook_up(given_df, given_list, get_df, get_list):
+    '''
+    given_df:原始的表，dataframe类型
+    given_list：given_list[0]是原始表的索引, given_list[1]是原始表需引用的值
+    get_df：获得值的原始表，dataframe类型
+    get_list：get_list[0]是给定表的索引，get_list[1]是获得值的列，如果没有会自动创建
+    '''
+    
+    temp_dic = {}
+    temp_dic = given_df.apply(creat_dict, args=(temp_dic, given_list[0], given_list[1]), axis=1)[0]
+    
+    get_df[get_list[1]] = get_df[get_list[0]].apply(lambda x : temp_dic[x] if (x in temp_dic) else '')
+    
+    return get_df
