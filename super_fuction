@@ -52,3 +52,31 @@ def vlook_up(given_df, given_list, get_df, get_list):
     get_df[get_list[1]] = get_df[get_list[0]].apply(lambda x : temp_dic[x] if (x in temp_dic) else '')
     
     return get_df
+
+#自动取唯一值的函数, 其实就是新获取一列，然后这一列是一个唯一值
+def merge_only_one(data, col_name_list):
+    '''
+    data:原始的表，dataframe类型
+    col_name_list：组成唯一值的列名
+    '''
+
+    col_string_list = []
+    #判断每一列是否是float类型的
+    for col in col_name_list:
+        #拿一个来判断就好了
+        #不过要先找出非缺失值index
+        not_null_index = data.loc[data[col].isnull() == False].index[0]
+        if '.' in str(data.loc[not_null_index, col]): #如果是float值，肯定有小数点，就要将其转化成str
+            data[col] = data[col].fillna(0).astype('int64')
+            data[col] = data[col].fillna(0).astype('str')
+        else:
+            data[col] = data[col].fillna(0).astype('str')
+            
+        col_string_list.append('x["{}"]'.format(col))#将列名按照元素格式化
+        
+    code = '+'.join(col_string_list)  #将代码变成字符串 
+    
+    final_code = 'data.apply(lambda x : {} ,axis=1)'.format(code)
+   
+    data["核对"] =  eval(final_code) #eval()这个函数不能执行 = 这样的赋值语句，因此要分开
+    return data
