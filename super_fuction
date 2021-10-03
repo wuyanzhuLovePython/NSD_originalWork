@@ -1,17 +1,13 @@
-"""
-Created on Mon Sep 13 21:21:33 2021
-
-@author: wanpeng.xie
-"""
+data.keys()
 
 #这个其实就是实现excel的自动数据透视，但是只是汇总求和，没有计数
 def changePivot(report, index_name, col_name_list):
-        ```
+        '''
         此函数实现的是, 输入大类，和任意列，都给你汇总结果
         report:输入的表
         index_name:需要汇总的大类
         col_name_list：需要汇总数量的数据列.(注意，这个是输入列表！！)
-        ```
+        '''
         pivotTemp = report.pivot_table(index=[index_name], values = col_name_list, aggfunc = 'sum')
         
         lengths = len(pivotTemp)#获取长
@@ -45,11 +41,16 @@ def vlook_up(given_df, given_list, get_df, get_list):
     get_df：获得值的原始表，dataframe类型
     get_list：get_list[0]是给定表的索引，get_list[1]是获得值的列，如果没有会自动创建
     '''
+    print('{}的类型是{}, {}的类型是{}, {}的类型是{}'.format(given_list[0], given_df[given_list[0]].dtypes, given_list[1], given_df[given_list[1]].dtypes, get_list[0], get_df[get_list[1]].dtypes))
     
     temp_dic = {}
     temp_dic = given_df.apply(creat_dict, args=(temp_dic, given_list[0], given_list[1]), axis=1)[0]
     
-    get_df[get_list[1]] = get_df[get_list[0]].apply(lambda x : temp_dic[x] if (x in temp_dic) else '')
+    get_df[get_list[1]] = get_df[get_list[0]].apply(lambda x : temp_dic[x] if (x in temp_dic) else -1)
+    
+    
+    
+    print('vlookup共匹配{}行，其中匹配成功{}行， 未成功{}行'.format(len(get_df[get_list[1]]), len(get_df[get_list[1]]) - (get_df[get_list[1]] == -1).sum(), (get_df[get_list[1]] == -1).sum()))
     
     return get_df
 
