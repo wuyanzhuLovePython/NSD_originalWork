@@ -206,10 +206,30 @@ class checkShortage:
                         checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
                 continue
             if firstDelta < 2:
-                checkChip.loc[i, '到料信息备注'] = '协调EC'
-                checkChip.loc[i, '协助人'] = '庄/加急'
-                checkChip.loc[i, '调整'] = '异常需判断'
-            continue
+                if checkChip.loc[i, 0] == '成品层' or (len(checkChip.loc[i, "产品编码"]) > 12 ) :
+                    if secondDelta >= 4:
+                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '协助人'] = '艳玲'
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=4)
+                    else:
+                        if secondDelta == 3:
+                            checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                            checkChip.loc[i, '协助人'] = '艳玲/加急'
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
+                        else:
+                            checkChip.loc[i, '到料信息备注'] = '协调EC'
+                            checkChip.loc[i, '协助人'] = '庄/加急'
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                else:
+                    if secondDelta > 3:
+                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '协助人'] = '艳玲/加急'
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
+                    else:
+                        checkChip.loc[i, '到料信息备注'] = '协调EC'
+                        checkChip.loc[i, '协助人'] = '庄/加急'
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
+                continue
     
     def shortageOrder(self, ):
         #变量全局化
