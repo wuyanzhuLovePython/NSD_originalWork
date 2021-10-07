@@ -6,98 +6,97 @@ Created on Sun Jan 10 21:31:36 2021
 """
 
 import pandas as pd
+import numpy as np
 import re
 import time
-import numpy as np
 from datetime import timedelta
 
 # print('------------正在导入数据-------------')
-# addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动欠料表核对.xlsx'
+# addr = 'C:\\Users\\86151\\Desktop\\company\\assembly自动欠料表核对.xlsx'
 # original = pd.read_excel(addr)
 # original = original.applymap(str)
-# checkChip = original.loc[original['物料组描述（物料）'].str.contains('全新芯片|芯片专用')]
+# checkChip = original.loc[original['物料组描述(物料)'].str.contains('全新芯片|芯片专用')]
 # checkChip.index = range(len(checkChip))
 # checkChip.insert(26, '调整', '')
-# pd.set_option('mode.chained_assignment', None)#取消警告
 # print('---------------导入成功---------------')
-
 class checkShortage:
     
-    def importFiles(self, ):
+    def ImportFiles(self, ):
         print('------------正在导入数据-------------')
-        addr = 'C:\\Users\\wanpeng.xie\\Desktop\\自动欠料表核对.xlsx'
+        addr = 'C:\\Users\\吴彦祖的laptop\\Desktop\\company\\assembly\\自动欠料表核对.xlsx'
         global original, checkChip
-        
         original = pd.read_excel(addr)
         original = original.applymap(str)
-        checkChip = original.loc[original['物料组描述（物料）'].str.contains('全新芯片|芯片专用')]
+        checkChip = original.loc[original['物料组描述(物料)'].str.contains('全新芯片|芯片专用')]
         checkChip.index = range(len(checkChip))
         insertList = list(checkChip.keys())
         checkChip.insert(insertList.index('昨天到料信息备注'), '调整', '')
-        pd.set_option('mode.chained_assignment', None)#取消警告
         print('---------------导入成功---------------')
     
     def files(self, ):
-
         print(type(original.loc[0, '产品编码']))
-        checkChip['工厂交期'] = pd.to_datetime(checkChip['工厂交期'])
-        checkChip['EC订单交期'] = pd.to_datetime(checkChip['EC订单交期'])
-        checkChip['PO交期'] = pd.to_datetime(checkChip['PO交期'])
-        checkChip['PO交期'] = checkChip['PO交期'].fillna(value = '空值')
-        checkChip['PO单号'] = checkChip['PO单号'].fillna(value = '空值') 
-        # timeDiff =  checkChip.loc[3, '工厂交期'] -  checkChip.loc[3, 'PO交期']
+        checkChip['DUE_DATE'] = pd.to_datetime(checkChip['DUE_DATE'])
+        checkChip['计划交货日期'] = pd.to_datetime(checkChip['计划交货日期'])
+        checkChip['物料到料日期'] = pd.to_datetime(checkChip['物料到料日期'])
+        checkChip['PO单号'] = checkChip['PO单号'].apply(str)
+        checkChip[0] = checkChip['物料组描述(成品)'].apply(lambda x : '' if ('2160' in x or '回收' in x or '2460' in x) else '成品层')
+        # checkChip['物料到料日期'] = checkChip['物料到料日期'].fillna(value = '空值')
+        # checkChip['PO单号'] = checkChip['PO单号'].fillna(value = '空值') 
+        # timeDiff =  checkChip.loc[3, 'DUE_DATE'] -  checkChip.loc[3, '物料到料日期']
         # #timeDiff = re.search(r'(.*) days (.*)', str(timeDiff)).group(1)
         # print(int(timeDiff))
-        # print(checkChip.loc[4, '工厂交期'], checkChip.loc[4, 'PO交期'])
+        # print(checkChip.loc[4, 'DUE_DATE'], checkChip.loc[4, '物料到料日期'])
         # print(timeDiff)
-        #print(checkChip.loc[5, 'PO交期'] , checkChip.loc[5, 'PO交期'] + timedelta(days=2))
+        #print(checkChip.loc[5, '物料到料日期'] , checkChip.loc[5, '物料到料日期'] + timedelta(days=2))
         
         #开始自动核对欠料表
         for i in range(len(checkChip)):
-
-            if checkChip.loc[i, 'PO单号'] == 'nan':
-                if checkChip.loc[i, '到料信息备注'] == '寄售':
-                    #get today's date
-                    todayDate = pd.to_datetime(time.strftime("%Y-%m-%d", time.localtime(time.time())))
-                    VMIdelta = checkChip.loc[i, '工厂交期'] - todayDate
-                    VMIdelta = int(re.search(r'(.*)days(.*)', str(VMIdelta)).group(1))
-                    if VMIdelta < 8 :
-                        checkChip.loc[i, '到料信息备注'] = '寄售，加急调料'
-                        checkChip.loc[i, '协助人'] = '谢万鹏'
-                    else:
-                        checkChip.loc[i, '到料信息备注'] = '寄售，暂时无需调料'
-                        checkChip.loc[i, '协助人'] = '谢万鹏'
-                    continue # it must add a 'continue' as long as finished filling in checkChip.loc[i, '到料信息备注']
+            
+            #先将非PO的备注
+            if checkChip.loc[i, 'PO单号'][:2] == '55':
+                #get today's date
+                todayDate = pd.to_datetime(time.strftime("%y-%m-%d", time.localtime()))
+                VMIdelta = checkChip.loc[i, 'DUE_DATE'] - todayDate
+                VMIdelta = int(re.search(r'(.*)days(.*)', str(VMIdelta)).group(1))
+                if VMIdelta < 8 :
+                    checkChip.loc[i, '到料信息备注'] = '寄售，加急调料'
+                    checkChip.loc[i, '协助人'] = '谢万鹏'
                 else:
-                    checkChip.loc[i, '到料信息备注'] = '没有PO，待核查'
-                    checkChip.loc[i, '协助人'] = '无PO'
-                    checkChip.loc[i, '调整'] = '不调整'
-                    continue
-            if checkChip.loc[i, 'PO单号'] != 'nan' and checkChip.loc[i, 'PO交期'] == '空值':
+                    checkChip.loc[i, '到料信息备注'] = '寄售，暂时无需调料'
+                    checkChip.loc[i, '协助人'] = '谢万鹏'
+                continue # it must add a 'continue' as long as finished filling in checkChip.loc[i, '到料信息备注']
+            elif checkChip.loc[i, '类别'] == '计划订单':
+                checkChip.loc[i, '到料信息备注'] = '计划订单查看异常'
+                checkChip.loc[i, '协助人'] = 'SQE'
+                checkChip.loc[i, '调整'] = '不调整'
+                continue
+            elif checkChip.loc[i, '类别'] == '采购申请':
+                checkChip.loc[i, '到料信息备注'] = '采购订单安排下单'
+                checkChip.loc[i, '协助人'] = '谢万鹏，下单'
+                checkChip.loc[i, '调整'] = '不调整'
+                continue
+            if checkChip.loc[i, '类别'] == '检验批' :
                 checkChip.loc[i, '到料信息备注'] = '在质检满足'
                 checkChip.loc[i, '协助人'] = 'OK'
                 checkChip.loc[i, '调整'] = '不调整'
                 continue
-            
-            
-            
-            #避免因为PO交期为nan而报错影响程序，日期差别放这边
-            firstDelta = checkChip.loc[i, '工厂交期'] -  checkChip.loc[i, 'PO交期']
+            #避免因为物料到料日期为nan而报错影响程序，日期差别放这边
+            firstDelta = checkChip.loc[i, 'DUE_DATE'] -  checkChip.loc[i, '物料到料日期']
             firstDelta = int(re.search(r'(.*) days (.*)', str(firstDelta)).group(1))
-            secondDelta = checkChip.loc[i, 'EC订单交期'] -  checkChip.loc[i, '工厂交期']
+            secondDelta = checkChip.loc[i, '计划交货日期'] -  checkChip.loc[i, 'DUE_DATE']
             secondDelta = int(re.search(r'(.*) days (.*)', str(secondDelta)).group(1))
             
             if firstDelta > 6:
                 if checkChip.loc[i, 0] == '成品层':
                     checkChip.loc[i, '到料信息备注'] = '交期满足'
                     checkChip.loc[i, '协助人'] = 'OK'
-                    checkChip.loc[i, '调整'] = '不调整'
+                    checkChip.loc[i, '调整'] = '不调整' 
                     continue
                 else:
                     if secondDelta > 0:
                         checkChip.loc[i, '到料信息备注'] = '6天半成品勉强满足'
                         checkChip.loc[i, '协助人'] = 'OK'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                     else:
                         checkChip.loc[i, '到料信息备注'] = '6天半成品勉强满足'
                         checkChip.loc[i, '协助人'] = 'OK'
@@ -112,9 +111,9 @@ class checkShortage:
                     continue
                 else:
                     if secondDelta > 0:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                         checkChip.loc[i, '协助人'] = '艳玲'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                     else:
                         checkChip.loc[i, '到料信息备注'] = '6天半成品勉强满足'
                         checkChip.loc[i, '协助人'] = 'OK'
@@ -127,9 +126,9 @@ class checkShortage:
                     checkChip.loc[i, '调整'] = '不调整'
                 else:
                     if secondDelta > 0:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                         checkChip.loc[i, '协助人'] = '艳玲'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                     else:
                         checkChip.loc[i, '到料信息备注'] = '加急'
                         checkChip.loc[i, '协助人'] = '加急'
@@ -142,94 +141,74 @@ class checkShortage:
                     checkChip.loc[i, '调整'] = '不调整'
                 else:
                     if secondDelta > 2:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                         checkChip.loc[i, '协助人'] = '艳玲'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=2)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=2)
                     else:
                         if secondDelta == 1:
-                            checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                            checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                             checkChip.loc[i, '协助人'] = '艳玲/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                         else:
                             checkChip.loc[i, '到料信息备注'] = '协调EC'
                             checkChip.loc[i, '协助人'] = '庄/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                 continue
             if firstDelta == 3:
                 if checkChip.loc[i, 0] == '成品层':
                     if secondDelta > 1:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                         checkChip.loc[i, '协助人'] = '艳玲'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                     else:
                         checkChip.loc[i, '到料信息备注'] = '加急'
                         checkChip.loc[i, '协助人'] = '加急'
                         checkChip.loc[i, '调整'] = '不调整'
                 else:
                     if secondDelta > 3:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                         checkChip.loc[i, '协助人'] = '艳玲'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=3)
                     else:
                         if secondDelta == 2:
-                            checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                            checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                             checkChip.loc[i, '协助人'] = '艳玲/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=2)
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=2)
                         else:
                             checkChip.loc[i, '到料信息备注'] = '协调EC'
                             checkChip.loc[i, '协助人'] = '庄/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=2)
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=2)
                 continue
             if firstDelta == 2:
                 if checkChip.loc[i, 0] == '成品层':
                     if secondDelta >= 2:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                         checkChip.loc[i, '协助人'] = '艳玲'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=2)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=2)
                     else:
                         if secondDelta == 1:
-                            checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                            checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                             checkChip.loc[i, '协助人'] = '艳玲/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                         else:
                             checkChip.loc[i, '到料信息备注'] = '协调EC'
                             checkChip.loc[i, '协助人'] = '庄/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
+                            checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=1)
                 else:
                     if secondDelta > 3:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
+                        checkChip.loc[i, '到料信息备注'] = '协调DUE_DATE'
                         checkChip.loc[i, '协助人'] = '艳玲/加急'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=3)
                     else:
                         checkChip.loc[i, '到料信息备注'] = '协调EC'
                         checkChip.loc[i, '协助人'] = '庄/加急'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
+                        checkChip.loc[i, '调整'] = checkChip.loc[i, 'DUE_DATE'] + timedelta(days=3)
                 continue
             if firstDelta < 2:
-                if checkChip.loc[i, 0] == '成品层' or (len(checkChip.loc[i, "产品编码"]) > 12 ) :
-                    if secondDelta >= 4:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
-                        checkChip.loc[i, '协助人'] = '艳玲'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=4)
-                    else:
-                        if secondDelta == 3:
-                            checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
-                            checkChip.loc[i, '协助人'] = '艳玲/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
-                        else:
-                            checkChip.loc[i, '到料信息备注'] = '协调EC'
-                            checkChip.loc[i, '协助人'] = '庄/加急'
-                            checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=1)
-                else:
-                    if secondDelta > 3:
-                        checkChip.loc[i, '到料信息备注'] = '协调工厂交期'
-                        checkChip.loc[i, '协助人'] = '艳玲/加急'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
-                    else:
-                        checkChip.loc[i, '到料信息备注'] = '协调EC'
-                        checkChip.loc[i, '协助人'] = '庄/加急'
-                        checkChip.loc[i, '调整'] = checkChip.loc[i, '工厂交期'] + timedelta(days=3)
-                continue
+                checkChip.loc[i, '到料信息备注'] = '协调EC'
+                checkChip.loc[i, '协助人'] = '庄/加急'
+                checkChip.loc[i, '调整'] = '异常需判断'
+            continue
     
     def shortageOrder(self, ):
         #变量全局化
@@ -239,11 +218,11 @@ class checkShortage:
         checkChipOrder.index = range(len(checkChipOrder))
         orderList = pd.DataFrame(np.arange(5).reshape((1,5)), columns=['编码', '描述', '需求日期', 'timeDelta', '备注'])
         #将物料编码全部找出来
-        codeList = list(set(list(checkChipOrder.loc[:,'对应物料组件编码'])))
+        codeList = list(set(list(checkChipOrder.loc[:,'物料组件编码'])))
         #开始进行循环
         i = 0
         for code in codeList:
-            tempIndedx = checkChipOrder.loc[checkChipOrder['对应物料组件编码'].str.contains(code)].index
+            tempIndedx = checkChipOrder.loc[checkChipOrder['物料组件编码'].str.contains(code)].index
             for index in tempIndedx:
                 todayDate = pd.to_datetime(time.strftime("%Y-%m-%d", time.localtime()))
                 timedelta = pd.to_datetime(checkChipOrder.loc[index, '我司需求']) - todayDate
@@ -262,24 +241,23 @@ class checkShortage:
                     orderList.loc[i, '备注'] = '正常下单，数量记得合并'
                     
                 i = i+1
-                
             
     def saveFiles(self, ):
-        checkChip['组件需求数'] = checkChip['组件需求数'].apply(float)
-        checkChip['订单数量'] = checkChip['订单数量'].apply(float)
         fileName = '核对欠料' + time.strftime("%Y-%m-%d", time.localtime()) + '.xlsx'
-        addr = 'C:\\Users\\wanpeng.xie\\Desktop\\核对欠料表更改\\' + fileName
+        addr = r'C:\Users\吴彦祖的laptop\Desktop\\' + fileName
         with pd.ExcelWriter(addr) as writer:
-            checkChip.to_excel(writer, sheet_name='核对欠料')
-            orderList.to_excel(writer, sheet_name='自动下单')                                                     
+            checkChip.to_excel(writer, sheet_name='核对欠料')                                                       
                     
-     
+            
+    
+        
         
 if __name__ == '__main__':    
+    pd.set_option('mode.chained_assignment', None)#取消警告
     C = checkShortage()
+    C.ImportFiles()
     print('-------------------正在核对欠料表，请等待--------------------')
-    C.importFiles()
     C.files()
-    C.shortageOrder()
+    #C.shortageOrder()#这个是依靠缺料表下单的，现在不需要
     C.saveFiles()
     print('-------------------已经核对完成------------------------')
