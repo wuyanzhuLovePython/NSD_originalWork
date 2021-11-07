@@ -12,16 +12,43 @@ import logging
 import re
 
 
+
+def creat_dict(report, dic, string1, string2):#将透视的表变成字典
+        
+        dic[report[string1]] = report[string2]
+        
+        return dic
+
+#实现自动vlookup函数
+def vlook_up(given_df, given_list, get_df, get_list):
+    '''
+    given_df:原始的表，dataframe类型
+    given_list：given_list[0]是原始表的索引, given_list[1]是原始表需引用的值
+    get_df：获得值的原始表，dataframe类型
+    get_list：get_list[0]是给定表的索引，get_list[1]是获得值的列，如果没有会自动创建
+    '''
+        
+    temp_dic = {}
+    temp_dic = given_df.apply(creat_dict, args=(temp_dic, given_list[0], given_list[1]), axis=1)[0]
+    
+    get_df[get_list[1]] = get_df[get_list[0]].apply(lambda x : temp_dic[x] if (x in temp_dic) else -1)
+    
+    print('{}的类型是{}, {}的类型是{}, {}的类型是{}'.format(given_list[0], given_df[given_list[0]].dtypes, given_list[1], given_df[given_list[1]].dtypes, get_list[0], get_df[get_list[1]].dtypes))
+    
+    print('vlookup共匹配{}行，其中匹配成功{}行， 未成功{}行'.format(len(get_df[get_list[1]]), len(get_df[get_list[1]]) - (get_df[get_list[1]] == -1).sum(), (get_df[get_list[1]] == -1).sum()))
+    
+    return get_df
+
 class auto_sluggish:
     
     def __init__(self, ):
-        addr = r'C:\Users\wanpeng.xie\Desktop\报表制作\cannt sent out\呆滞报表自动化.xlsx'
+        addr = r'C:\Users\吴彦祖的laptop\Desktop\company\呆滞报表自动化.xlsx'
         sluggish = pd.read_excel(addr, sheet_name=None)
         self.finace_data = sluggish['财务呆滞明细']
         self.SAP_data = sluggish['SAP数据']
         self.total_sluggish = sluggish['格式']
         self.detial_sluggish = sluggish['呆滞明细']
-        self.total_sluggish = sluggish['汇总']
+        #self.total_sluggish = sluggish['汇总']
         self.segmentation = sluggish['细分']
         self.first_time = datetime.datetime.strptime('20210802', '%Y%m%d').date()
         self.end_time = datetime.datetime.strptime('20210901', '%Y%m%d').date()
@@ -64,31 +91,7 @@ class auto_sluggish:
         
         return tempData
     
-    def creat_dict(self, report, dic, string1, string2):#将透视的表变成字典
-        
-        dic[report[string1]] = report[string2]
-        
-        return dic
-
-    #实现自动vlookup函数
-    def vlook_up(self, given_df, given_list, get_df, get_list):
-        '''
-        given_df:原始的表，dataframe类型
-        given_list：given_list[0]是原始表的索引, given_list[1]是原始表需引用的值
-        get_df：获得值的原始表，dataframe类型
-        get_list：get_list[0]是给定表的索引，get_list[1]是获得值的列，如果没有会自动创建
-        '''
-            
-        temp_dic = {}
-        temp_dic = given_df.apply(self.creat_dict, args=(temp_dic, given_list[0], given_list[1]), axis=1)[0]
-        
-        get_df[get_list[1]] = get_df[get_list[0]].apply(lambda x : temp_dic[x] if (x in temp_dic) else -1)
-        
-        print('{}的类型是{}, {}的类型是{}, {}的类型是{}'.format(given_list[0], given_df[given_list[0]].dtypes, given_list[1], given_df[given_list[1]].dtypes, get_list[0], get_df[get_list[1]].dtypes))
-        
-        print('vlookup共匹配{}行，其中匹配成功{}行， 未成功{}行'.format(len(get_df[get_list[1]]), len(get_df[get_list[1]]) - (get_df[get_list[1]] == -1).sum(), (get_df[get_list[1]] == -1).sum()))
-        
-        return get_df
+    
     
     def add_detail(self, report, ):
         
@@ -151,7 +154,7 @@ class auto_sluggish:
         pivot_new.apply(self.add_detail_new, axis=1, args=(new_sluggish,))
         
         #再加入大类
-        self.total_sluggish = self.vlook_up(self.segmentation, ['物料组描述', '细分'], self.total_sluggish, ['物料组描述', '细分'])
+        self.total_sluggish = vlook_up(self.segmentation, ['物料组描述', '细分'], self.total_sluggish, ['物料组描述', '细分'])
         
         #有些半成品和成品匹不到，加进去
         self.total_sluggish['细分'] = self.total_sluggish.apply(lambda x: '自制半成品' if (re.match(r'半成品(.*)系列(.*)', x['物料组描述'], re.M|re.I)) else x['细分'], axis=1)
@@ -160,6 +163,10 @@ class auto_sluggish:
         self.save_file()
         
     def week_deal(self, ):
+        '''
+        就是每周新增的数量，用程序跑一下
+        
+        '''
         self.SAP_data['物料工厂'] = self.SAP_data.apply(lambda x : str(x['料品编码']) + str(x['工厂']), axis=1)
 
         #筛选出新旧编码然后透视，然后获得字典
@@ -192,12 +199,11 @@ class auto_sluggish:
         self.detial_sluggish[col_name_list[6]] = self.detial_sluggish.apply(lambda x : x['{}月历史呆滞数量'.format(month)] + x['{}月新增数量'.format(month)] - x[col_name_list[4]], axis=1)
         self.detial_sluggish[col_name_list[7]] = self.detial_sluggish.apply(lambda x :x[col_name_list[6]] * x[0], axis=1)
         
-        summary = self.changePivot(self.detial_sluggish, '细分', ['第一周消耗数量', '第一周总消耗金额'])
-        print(summary)
+        #summary = self.changePivot(self.detial_sluggish, '细分', ['第一周消耗数量', '第一周总消耗金额'])
+        #print(summary)
        
         
-        
-        self.save_seek_file(summary)
+        self.save_seek_file()
         
     def creat_dict(self, report, dic):#将透视的表变成字典
         
@@ -207,36 +213,36 @@ class auto_sluggish:
     
     def save_file(self):
         
-        fileName_addr = r'C:\Users\wanpeng.xie\Desktop\报表制作\cannt sent out\财务呆滞结果1.xlsx'
+        fileName_addr = r'C:\Users\吴彦祖的laptop\Desktop\company\财务呆滞结果1.xlsx'
         
-        summary = self.changePivot(self.total_sluggish, '细分', ['7月历史呆滞数量', '7月历史呆滞金额', '7月新增数', '7月新增金额'])
+        #summary = self.changePivot(self.total_sluggish, '细分', ['7月历史呆滞数量', '7月历史呆滞金额', '7月新增数', '7月新增金额'])
 
         with pd.ExcelWriter(fileName_addr) as writer:
             self.total_sluggish.to_excel(writer, sheet_name='呆滞', index=None)
-            summary.to_excel(writer, sheet_name='呆滞汇总', index=None)
+            #summary.to_excel(writer, sheet_name='呆滞汇总', index=None)
             
-    def save_seek_file(self, summary):
-        fileName_addr = r'C:\Users\wanpeng.xie\Desktop\报表制作\cannt sent out\每周呆滞结果1.xlsx'
+    def save_seek_file(self):
+        fileName_addr = r'C:\Users\吴彦祖的laptop\Desktop\company\每周呆滞结果1.xlsx'
         
-        summary_list = list(summary.keys())[1:] #把两个列名先弄出来
-        for j in summary_list: #原表先加两列
-            self.self.total_sluggish[j] = 0
+        # summary_list = list(summary.keys())[1:] #把两个列名先弄出来
+        # for j in summary_list: #原表先加两列
+        #     self.self.total_sluggish[j] = 0
             
-        #然后填上内容
-        flag = 0
-        for j in summary_list:
-            for i in list(self.self.total_sluggish['物料大类']):
-                try:
-                    temp_index = summary.loc[summary['细分'] == i].index    
-                    self.self.total_sluggish.loc[flag, j] = (summary.loc[temp_index[0], j]/10000)#要除以10000
-                except Exception as e:
-                    logging.error('出现错误，错误类型:{}，报错信息:{}'.format(IndexError, e))
-                flag += 1
-            flag = 0 #当换一列的时候，要将索引清零
+        # #然后填上内容
+        # flag = 0
+        # for j in summary_list:
+        #     for i in list(self.self.total_sluggish['物料大类']):
+        #         try:
+        #             temp_index = summary.loc[summary['细分'] == i].index    
+        #             self.self.total_sluggish.loc[flag, j] = (summary.loc[temp_index[0], j]/10000)#要除以10000
+        #         except Exception as e:
+        #             logging.error('出现错误，错误类型:{}，报错信息:{}'.format(IndexError, e))
+        #         flag += 1
+        #     flag = 0 #当换一列的时候，要将索引清零
         
         with pd.ExcelWriter(fileName_addr) as writer:
             self.detial_sluggish.to_excel(writer, sheet_name='呆滞', index=None)
-            self.self.total_sluggish.to_excel(writer, sheet_name='呆滞汇总', index=None)
+            #self.self.total_sluggish.to_excel(writer, sheet_name='呆滞汇总', index=None)
             
             
     def run(self, ):
