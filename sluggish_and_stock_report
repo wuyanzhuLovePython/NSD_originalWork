@@ -8,6 +8,7 @@ Created on Sun Dec 12 19:27:10 2021
 import re
 import pandas as pd
 import numpy as np
+import time
 from superFuction import super_function
 
 def active():
@@ -37,7 +38,7 @@ def sum(a,b):
     
 def imput_sluggish_files():
     
-    addr = r'C:\Users\吴彦祖的laptop\呆滞进销存报表.xlsx'
+    addr = r'C:\Users\wanpeng.xie\Desktop\呆滞进销存报表.xlsx'
     data = pd.read_excel(addr, sheet_name=None)
     
     return data
@@ -72,7 +73,8 @@ def deal_sluggish_report(data):
 
 def save_sluggish_files(t_sluggish, summary):
     
-    fileName_addr = r'C:\Users\吴彦祖的laptop\Desktop\company\呆滞进销存.xlsx'
+    today = today = time.strftime('%Y-%m-%d', time.localtime())
+    fileName_addr = r'C:\Users\wanpeng.xie\Desktop\呆滞进销存' + today + '.xlsx'
         
     with pd.ExcelWriter(fileName_addr) as writer:
         t_sluggish.to_excel(writer, sheet_name='财务呆滞报表（PMC）', index=None)
@@ -83,7 +85,7 @@ def save_sluggish_files(t_sluggish, summary):
 '''
 def input_stock_reprot():
     
-    addr = r'C:\Users\吴彦祖的laptop\库存进销存报表.xlsx'
+    addr = r'C:\Users\wanpeng.xie\Desktop\库存进销存报表.xlsx'
     data = pd.read_excel(addr, sheet_name=None)
     
     return data
@@ -146,9 +148,8 @@ def deal_stock_report(data):
     # 做汇总1的第四个表格
     stock_total1_4 = stock_total1_4_fuction(total_stock)
     
-    #save_dict = {stock_in_and_out : '各品类月入库出库量', raw_meterial_turnover : '原材料周转报表', total_turnover : '总周转报表', stock_total1_1 : '汇总1的第一报表', stock_total1_2 : '汇总1的第二报表', stock_total1_4 : '汇总1的第四报表'}
     
-    save_dict = {'各品类月入库出库量' : stock_in_and_out, '原材料周转报表' : raw_meterial_turnover, '总周转报表' : total_turnover, '汇总1的第一报表' : stock_total1_1, '汇总1的第二报表' : stock_total1_2, '汇总1的第四报表' : stock_total1_4}
+    save_dict = {'库存进销存报表' : total_stock, '各品类月入库出库量' : stock_in_and_out, '原材料周转报表' : raw_meterial_turnover, '总周转报表' : total_turnover, '汇总1的第一报表' : stock_total1_1, '汇总1的第二报表' : stock_total1_2, '汇总1的第四报表' : stock_total1_4}
     
     save_stock_files(save_dict)
     
@@ -265,9 +266,9 @@ def stock_total1_4_fuction(total_stock):
 
     #第四个表格由于没有现成的汇总，所以要从物料组描述中透视汇总。有以下两个大类需要单独处理
     #先处理外购注塑件
-    stock_total1_4['物料组描述'] = stock_total1_4.apply(lambda x:'外购注塑料件' if (re.match(r'外购注塑件(.*)', x['物料组描述'], re.M|re.I)) else x['物料组描述'], axis=1 )
+    stock_total1_4['物料组描述'] = stock_total1_4.apply(lambda x:'外购注塑件' if (re.match(r'外购注塑件(.*)', x['物料组描述'], re.M|re.I)) else x['物料组描述'], axis=1 )
     # 再处理芯片
-    stock_total1_4['物料组描述'] = stock_total1_4.apply(lambda x:'外购注塑料件' if ( '芯片' in x['物料组描述']) else x['物料组描述'], axis=1 )
+    stock_total1_4['物料组描述'] = stock_total1_4.apply(lambda x:'芯片' if ( '芯片' in x['物料组描述']) else x['物料组描述'], axis=1 )
     
     #数据预处理完成后，再继续透视汇总
     
@@ -278,7 +279,8 @@ def stock_total1_4_fuction(total_stock):
     
 def save_stock_files(save_dict):
     
-    fileName_addr = r'C:\Users\吴彦祖的laptop\Desktop\company\库存进销存.xlsx'
+    today = today = time.strftime('%Y-%m-%d', time.localtime())
+    fileName_addr = r'C:\Users\wanpeng.xie\Desktop\库存进销存' + today +'.xlsx'
         
     with pd.ExcelWriter(fileName_addr) as writer:
         for sheet_name, report in save_dict.items():
